@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /*
 Copyright (C) 2012 Panagiotis Tigas (ptigas@gmail.com)
 
