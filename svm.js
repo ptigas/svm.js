@@ -77,6 +77,62 @@ svm.prototype.train = function( xs, ys ) {
 	}
 };
 
+svm.prototype.solve_lagrange = function( i1, i2 ) {
+	var a1 = this.a[i1];
+	var a2 = this.a[i2];
+	var x1 = this.x[i1];
+	var x2 = this.x[i2];
+	var y1 = this.y[i1];
+	var y2 = this.y[i2];	
+	var u1 = this.evaluate(x1);
+	var u2 = this.evaluate(x2);
+
+	var E1 = u1 - y1;
+	var E2 = u2 - y2;
+
+	if ( y1 != y2 ) {
+		var L = Math.max( 0, a2-a1 );
+		var H = Math.min( this.C, this.c+a2-a1 );	
+	} else {
+		var L = Math.max( 0, a2+a1-C );
+		var H = Math.min( C, a2+a1 );
+	}
+
+	if ( this.is_linear ) {
+		var K = function(a, b) { return dot(a, b); };
+	} else {
+		var K = this.kernel;	
+	}	
+	
+	h = K(x1, x1) + K(x2, x2) - 2*K(x1, x2);
+
+	if ( h > 0 ) {		
+		var a2n = a2 + ( y2*( E1 - E2 ) ) / h;
+		var a2n = Math.min( H, Math.max(a2nc, L) ); // clipt a2n
+	} else {
+		/* h is not positive - computing Ψ */
+		var f1 = y1*(E1+this.b) - a1*K(x1,x1) - s*a2*K(x1,x2);
+		var f2 = y2*(E2+this.b) - s*a1*K(x1,x2) - a2*K(x2,x2);
+		var L1 = a1 + s*(a2-L);
+		var L2 = a1 + s*(a2-L);
+		var psiL = L1*f1 + L*f2 + .5*L1*L1*K(x1,x1) + .5*L*L*K(x2,x2) + S*L*L1*K(x1,x2);
+		var psiH = H1*f1 + H*f2 + .5*H1*H1*K(x1,x1) + .5*H*H*K(x2,x2) + S*H*H1*K(x1,x2);
+		if ( psiL < psiH - this.e ) {
+			var a2n = L;			
+		} else if ( psiL > psiH + this.e ) {
+			var a2n = H;
+		} else {
+			var a2 = a2;
+		}
+	}
+	
+	if ( Math.abs(a2n-a2) < this.e*(a2+a2n+this.e) ) {
+		return false;
+	}
+	a1 = a1+s*(a2-a2n);
+	return true;
+}
+
 svm.prototype.examine_example = function( i2 ) {
 	x2 = this.x[i2];
 	y2 = this.evaluate.( x2 );
