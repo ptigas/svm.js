@@ -30,7 +30,10 @@ function svm( C ) {
 	this.n = null;
 	this.b = null;
 
+	this.C = 1.0;
+
 	this.tol = 1e-4;
+	this.e = 1e-4;
 
 	/* set default kernel to null and
 	 * is_linear to true.
@@ -66,6 +69,7 @@ svm.prototype.train = function( xs, ys ) {
 	while ( num_changed > 0 || examine_all ) {
 		num_changed = 0;
 		if ( examine_all ) {
+			console.log("Examine all")
 			// check all training examples
 			for ( var i=0; i<this.n; i++ ) {
 				num_changed += (this.examine_example(i)?1:0);
@@ -91,8 +95,9 @@ svm.prototype.examine_example = function( i2 ) {
 	while ( i1 === i2 ) {
 		i1 = Math.floor( Math.random()*this.n );
 	}
-	console.log("i1="+i1+" i2="+i2);
-	return this.solve_lagrange( i1, i2 );
+	var res = this.solve_lagrange( i1, i2 );
+	console.log("i1="+i1+" i2="+i2+" a="+this.a + " res=" + res );
+	return res;
 }
 
 svm.prototype.solve_lagrange = function( i1, i2 ) {
@@ -105,12 +110,14 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 	var u1 = this.evaluate(x1);
 	var u2 = this.evaluate(x2);
 
+	var s = y1*y2;
+
 	var E1 = u1 - y1;
 	var E2 = u2 - y2;
 
 	if ( y1 != y2 ) {
 		var L = Math.max( 0, a2-a1 );
-		var H = Math.min( this.C, this.c+a2-a1 );	
+		var H = Math.min( this.C, this.C+a2-a1 );	
 	} else {
 		var L = Math.max( 0, a2+a1-C );
 		var H = Math.min( C, a2+a1 );
@@ -129,8 +136,7 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 	h = K(x1, x1) + K(x2, x2) - 2*K(x1, x2);
 
 	if ( h > 0 ) {		
-		var a2n = a2 + ( y2*( E1 - E2 ) ) / h;
-		var a2nc = Math.min( H, Math.max(a2nc, L) ); // clipt a2n
+		var a2n = a2 + ( y2*( E1 - E2 ) ) / h;		
 	} else {
 		/* h is not positive - computing Ψ */
 		var f1 = y1*(E1+this.b) - a1*K(x1,x1) - s*a2*K(x1,x2);
@@ -147,6 +153,7 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 			var a2n = a2;
 		}
 	}
+	var a2nc = Math.min( H, Math.max(a2n, L) ); // clipt a2n
 	
 	if ( Math.abs(a2n-a2) < this.e*(a2+a2n+this.e) ) {
 		return false;
@@ -156,15 +163,15 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 	/* update the threshold b */
 	var b1 = E1+y1*(a1n+a1)*K(x1,x1)+y2*(a2nc-a2)*K(x1,x2)+this.b;
 	var b2 = E2+y1*(a1n+a1)*K(x1,x1)+y2*(a2nc-a2)*K(x2,x2)+this.b;
-	//this.b = (b1+b2)/2.0;
+	this.b = (b1+b2)/2.0;
 
-	//console.log( E1 );
+	//console.log( "E="+this.b  );
 
 	a1 = a1n;
 	a2 = a2n;
 
-	//this.a[i1] = a1;
-	//this.a[i2] = a2;
+	this.a[i1] = a1;
+	this.a[i2] = a2;
 
 	return true;
 }
@@ -209,3 +216,5 @@ s = new svm( 1.0 );
 s.train( x, y )
 
 console.log( x );
+
+console.log( s.a );
