@@ -37,8 +37,8 @@ function svm( C ) {
 	 * If we set the kernel to a different function
 	 * then turn is_linear to false.
 	 */
-	this.kernel = null;
-	this.is_linear = true;
+	this.kernel = function(a, b) { return dot(a, b); };
+	this.is_linear = false;
 
 	console.log( "C: " + C );
 }
@@ -50,9 +50,16 @@ svm.prototype.train = function( xs, ys ) {
 
 	// set n, x, y and a arrays.
 	this.n = xs.length;
-	this.x = xs
-	this.y = ys
-	this.a = []
+	this.x = xs;
+	this.y = ys;
+	
+
+	this.a = new Array(this.n);
+	for ( var i=0; i<this.n; i++ ) {
+		this.a[i] = 0.0;
+	}
+
+	this.b = 0.0;
 	
 	var num_changed = 0;
 	var examine_all = true;
@@ -60,22 +67,33 @@ svm.prototype.train = function( xs, ys ) {
 		num_changed = 0;
 		if ( examine_all ) {
 			// check all training examples
-			if ( this.a[i] != 0 && this.a[i] != C ) {
-				num_changed += this.examine_example(i);
+			for ( var i=0; i<this.n; i++ ) {
+				num_changed += (this.examine_example(i)?1:0);
 			}
+			examine_all = false;
 		} else {
 			// check only non-boundary cases
 			for ( var i=0; i<this.n; i++ ) {
-				if ( this.a[i] != 0 && this.a[i] != C ) {
-					num_changed += this.examine_example(i);
+				if ( this.a[i] != 0 && this.a[i] != this.C ) {
+					num_changed += (this.examine_example(i)?1:0);
 				}
 			}
 			if ( num_changed == 0 ) {
 				examine_all = true;	
 			}
-		}		
+		}
+		console.log( num_changed + " " + examine_all );
 	}
 };
+
+svm.prototype.examine_example = function( i2 ) {
+	var i1 = i2;
+	while ( i1 === i2 ) {
+		i1 = Math.floor( Math.random()*this.n );
+	}
+	console.log("i1="+i1+" i2="+i2);
+	return this.solve_lagrange( i1, i2 );
+}
 
 svm.prototype.solve_lagrange = function( i1, i2 ) {
 	var a1 = this.a[i1];
@@ -98,6 +116,10 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 		var H = Math.min( C, a2+a1 );
 	}
 
+	if ( L == H ) {
+		return false;
+	}
+
 	if ( this.is_linear ) {
 		var K = function(a, b) { return dot(a, b); };
 	} else {
@@ -108,7 +130,7 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 
 	if ( h > 0 ) {		
 		var a2n = a2 + ( y2*( E1 - E2 ) ) / h;
-		var a2n = Math.min( H, Math.max(a2nc, L) ); // clipt a2n
+		var a2nc = Math.min( H, Math.max(a2nc, L) ); // clipt a2n
 	} else {
 		/* h is not positive - computing Ψ */
 		var f1 = y1*(E1+this.b) - a1*K(x1,x1) - s*a2*K(x1,x2);
@@ -122,76 +144,29 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 		} else if ( psiL > psiH + this.e ) {
 			var a2n = H;
 		} else {
-			var a2 = a2;
+			var a2n = a2;
 		}
 	}
 	
 	if ( Math.abs(a2n-a2) < this.e*(a2+a2n+this.e) ) {
 		return false;
 	}
-	a1 = a1+s*(a2-a2n);
+	a1n = a1+s*(a2-a2n);
+
+	/* update the threshold b */
+	var b1 = E1+y1*(a1n+a1)*K(x1,x1)+y2*(a2nc-a2)*K(x1,x2)+this.b;
+	var b2 = E2+y1*(a1n+a1)*K(x1,x1)+y2*(a2nc-a2)*K(x2,x2)+this.b;
+	//this.b = (b1+b2)/2.0;
+
+	//console.log( E1 );
+
+	a1 = a1n;
+	a2 = a2n;
+
+	//this.a[i1] = a1;
+	//this.a[i2] = a2;
+
 	return true;
-}
-
-svm.prototype.examine_example = function( i2 ) {
-	x2 = this.x[i2];
-	y2 = this.evaluate.( x2 );
-	u2 = this.y[i2];
-	a2 = this.a[i2];
-	E2 = u2-y2;
-	r2 = E2*y2;
-	if ( (r2 < -this.tol && a2 < C ) ||
-		 (r2 >  this.tol && a2 > C ) ) {
-
-	}
-}
-
-/**
- * Function to check if 
- * Karush-Kuhn-Tucker (KKT) conditions
- * are valid.
- *
- * @param i number of example to test
- * @returns boolean
- */
-svm.prototype.kkt = function( i ) {
-	if ( this.a === null ) {
-		throw "alphas are null.";
-	}
-
-	if ( this.x === null ) {
-		throw "xs are null.";
-	}
-
-	if ( this.y === null ) {
-		throw "xs are null.";
-	}
-
-	if ( this.x.length != this.y.length != this.a.length != this.n ) {
-		throw "xs, ys and alphas don't have the same length."
-	}
-
-	/* KKT conditions
-	 *
-	 * a_i = 0 	   <=> y_i*u_i >= 1
-	 * 0 < a_i < C <=> y_i*u_i == 1
-	 * a_i = C     <=> y_i*u_i <= 1
-	 */
-	var u = this.evaluate( this.x[i] );
-	if ( this.a[i] == 0 ) {		
-		if ( ( this.y[i] * u ) >= 1 ) {
-			return true;
-		}
-	} else if ( this.a[i] == this.C ) {
-		if ( ( this.y[i] * u ) == 1 ) {
-			return true;
-		}
-	} else {
-		if ( ( this.y[i] * u ) <= 1 ) {
-			return true;
-		}
-	}
-	return false;
 }
 
 svm.prototype.evaluate = function( x ) {
@@ -209,20 +184,24 @@ svm.prototype.evaluate = function( x ) {
 			s += this.y[i]*
 				 this.a[i]*
 				 this.kernel( this.x[i], x );
+			//console.log( "evaluation x="+x+" ---> s="+this.b);
 		}
-		u = s - b;
+		u = s - this.b;
 	}
+
+	//console.log( "evaluation x="+x+" ---> "+u );
+
 	return u;
 }
 
 var x = [
-	[1,2],
-	[3,4],
+	[0,0],
+	[1,1],
 ];
 
 var y = [
-	1,
-	-1
+	-1,
+	1
 ];
 
 s = new svm( 1.0 );
