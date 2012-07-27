@@ -44,7 +44,7 @@ function svm( C ) {
 	this.n = null;
 	this.b = null;
 
-	this.C = 1.0;
+	this.C = 10.0;
 
 	this.tol = 1e-4;
 	this.e = 1e-4;
@@ -113,7 +113,7 @@ svm.prototype.train = function( xs, ys ) {
 			}
 		}
 
-		if ( loop++ > 5000 ) {
+		if ( loop++ > 1000 ) {
 			break;
 		}
 		//console.log( num_changed + " " + examine_all );
