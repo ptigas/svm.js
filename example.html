@@ -1,0 +1,186 @@
+<html>
+<head>	
+	<style>
+		a { text-decoration: none; color: blue; }
+		a:hover { text-decoration: none; }
+	</style>
+</head>
+<body style="margin:0; padding:0">		
+	<canvas id="yo" width="500" height="500" style="padding:0; margin:0">
+	</canvas>	
+	<div style="text-align:center; width:500; padding-top:20px">
+		<a href="#" onclick="label=true;return false;">Positive</a> |
+		<a href="#" onclick="label=false;return false;">Negative</a> |
+		<a href="#" onclick="train();return false;">Train</a>
+	</div>
+	<script src='svm.js'></script>
+	<script>
+	var dataset = new Array();
+	var labels = new Array();
+
+	var label = true;
+
+	var ss = 50.0;
+
+	var canvas = document.getElementById("yo");
+	var context = canvas.getContext("2d");
+
+	var width = 500;
+	var height = 500;
+
+	//http://vetruvet.blogspot.co.uk/2010/10/drawing-dashed-lines-on-html5-canvas.html
+	CanvasRenderingContext2D.prototype.dashedLine = function(x1, y1, x2, y2, dashLen) {
+	    if (dashLen == undefined) dashLen = 2;
+	    
+	    this.beginPath();
+	    this.moveTo(x1, y1);
+	    
+	    var dX = x2 - x1;
+	    var dY = y2 - y1;
+	    var dashes = Math.floor(Math.sqrt(dX * dX + dY * dY) / dashLen);
+	    var dashX = dX / dashes;
+	    var dashY = dY / dashes;
+	    
+	    var q = 0;
+	    while (q++ < dashes) {
+	     x1 += dashX;
+	     y1 += dashY;
+	     this[q % 2 == 0 ? 'moveTo' : 'lineTo'](x1, y1);
+	    }
+	    this[q % 2 == 0 ? 'moveTo' : 'lineTo'](x2, y2);
+	    
+	    this.stroke();
+	    this.closePath();
+	};
+
+	function draw_grid(gridPixelSize, color) {
+        context.save();
+        context.lineWidth = 0.1;
+        context.strokeStyle = color;
+
+        // horizontal grid lines
+        for(var i = 0; i <= canvas.height; i = i + gridPixelSize) {
+            context.beginPath();
+            context.moveTo(0, i);
+            context.lineTo(canvas.width, i);
+            context.closePath();
+            context.stroke();
+        }
+
+        // vertical grid lines
+        for(var j = 0; j <= canvas.width; j = j + gridPixelSize) {
+            context.beginPath();
+            context.moveTo(j, 0);
+            context.lineTo(j, canvas.height);
+            context.closePath();
+            context.stroke();
+        }
+
+        context.restore();
+    }
+
+	function draw_axes() {
+		context.lineWidth = .3;
+		context.beginPath();
+		context.moveTo( width / 2 , 0 );
+		context.lineTo( width / 2 , height );
+		context.moveTo( 0, height / 2);
+		context.lineTo( width, height /2 );
+		context.closePath();		
+		context.strokeStyle = "#ccc";
+		context.stroke();
+	}
+
+	function draw_dot( x, y, color ) {
+		context.beginPath();
+		context.arc(x, y, 5, 0, Math.PI * 2, false);
+		context.closePath();			
+		context.fillStyle = color;		
+		context.fill();
+	}
+
+	function add_point( x, y ) {
+		dataset.push( [ (x-width/2)/ss, (y-height/2)/ss] );
+		if ( label == true ) {
+			draw_dot( x, y, "blue" );
+			labels.push( 1 );
+		} else {
+			draw_dot( x, y, "red" );
+			labels.push( -1 );
+		}
+	}
+
+	function getCursorPosition(e) {
+	    /* returns Cell with .row and .column properties */
+	    var x;
+	    var y;
+	    if (e.pageX != undefined && e.pageY != undefined) {
+			x = e.pageX;
+			y = e.pageY;
+	    } else {
+			x = e.clientX;
+			y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+	    }
+		
+		add_point( x, y );
+	    
+	    console.log( x + " " + y );
+	}
+
+	canvas.addEventListener("click", getCursorPosition, false);
+	draw_grid( 10, '#cfcfcf')
+	draw_axes();
+
+	function draw_svm( w, b, ss, color ) {
+		var xs= [-5, 5];
+		var ys= [0, 0];
+		ys[0]= (-b - w[0]*xs[0])/w[1];
+		ys[1]= (-b - w[0]*xs[1])/w[1];		
+
+		context.lineWidth = 3;
+		context.beginPath();
+      	// wx+b=0 line
+      	context.moveTo(xs[0]*ss+width/2, ys[0]*ss+height/2);
+      	context.lineTo(xs[1]*ss+width/2, ys[1]*ss+height/2);
+
+      	context.closePath();		
+		context.strokeStyle = color;
+		context.stroke();
+
+		context.lineWidth = .3;
+		context.beginPath();
+      	
+      	
+      	
+      	context.closePath();	
+		context.strokeStyle = color;
+		// wx+b=1 line
+		context.dashedLine( 
+							xs[0]*ss+width/2, 
+							(ys[0]-1.0/w[1])*ss+height/2,
+						    xs[1]*ss+width/2, 
+						    (ys[1]-1.0/w[1])*ss+height/2,
+						    2
+						  );
+		// wx+b=-1 line
+		context.dashedLine( 
+							xs[0]*ss+width/2, 
+							(ys[0]+1.0/w[1])*ss+height/2,
+						    xs[1]*ss+width/2, 
+						    (ys[1]+1.0/w[1])*ss+height/2,
+						    2
+						  );
+		context.stroke();
+	}
+
+	function train() {		
+		var s = new svm();		
+		s.train( dataset, labels );
+		var wb = s.compute_weights();
+		draw_svm( wb.w, wb.b, ss, "black");
+	}
+
+	</script>
+
+</body>
+</html>
