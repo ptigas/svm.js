@@ -43,9 +43,7 @@ function svm( C ) {
 	this.C = 10.0;
 
 	this.tol = 1e-4;
-	this.e = 1e-4;
-
-	this.error_cache = array();
+	this.e = 1e-4;	
 
 	/* set default kernel to null and
 	 * is_linear to true.
@@ -65,6 +63,8 @@ svm.prototype.train = function( xs, ys ) {
 	this.n = xs.length;
 	this.x = xs;
 	this.y = ys;
+
+	this.error_cache = new Array( this.n );
 
 
 	this.a = new Array(this.n);
@@ -158,7 +158,7 @@ svm.prototype.examine_example = function( i1 ) {
 		var k=0, i2=i1;
 		var tmax=0;
 
-		while ( i2 === i1 ) i2 = Math.floor(Math.random()*this.n;
+		while ( i2 === i1 ) i2 = Math.floor( Math.random()*this.n );
 
 		return this.solve_lagrange( i1, i2 );
 
