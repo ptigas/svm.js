@@ -17,10 +17,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-// generate random integer between a and b (b excluded)
-function randi(a, b) {
- return Math.floor(Math.random()*(b-a)+a);
-}
 
 function dot( A, B ) {
 	if ( A.length != B.length ) {
@@ -48,6 +44,8 @@ function svm( C ) {
 
 	this.tol = 1e-4;
 	this.e = 1e-4;
+
+	this.error_cache = array();
 
 	/* set default kernel to null and
 	 * is_linear to true.
@@ -142,7 +140,6 @@ svm.prototype.TTK = function( i ) {
 	} else {
 		return true;
 	}
-
 }
 
 svm.prototype.examine_example = function( i1 ) {
@@ -161,7 +158,7 @@ svm.prototype.examine_example = function( i1 ) {
 		var k=0, i2=i1;
 		var tmax=0;
 
-		while ( i2 === i1 ) i2 = randi( 0, this.n );
+		while ( i2 === i1 ) i2 = Math.floor(Math.random()*this.n;
 
 		return this.solve_lagrange( i1, i2 );
 
@@ -298,7 +295,7 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 	//console.log( "bs= " + b1 + " " + b2 );
 	console.log( "as= " + a1n + " " + a2n );
 	//if(a1n > 0 && a1n < this.C) this.b= b2;
-    if(a2n > 0 && a2n < this.C) this.b= b1;
+    //if(a2n > 0 && a2n < this.C) this.b= b1;
 
 	//console.log( "b="+this.b  );
 
@@ -317,6 +314,10 @@ svm.prototype.solve_lagrange = function( i1, i2 ) {
 
 	this.a[i1] = a1;
 	this.a[i2] = a2;
+
+	/* update error cache */
+	this.error_cache[ i1 ] = this.evaluate( x1 ) - this.y[i1]; 
+	this.error_cache[ i2 ] = this.evaluate( x2 ) - this.y[i2];
 
 	return 1;
 }
