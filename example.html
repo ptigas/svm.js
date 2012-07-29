@@ -134,11 +134,12 @@
 	function draw_svm( w, b, ss, color ) {
 		var xs= [-5, 5];
 		var ys= [0, 0];
-		ys[0]= (-b - w[0]*xs[0])/w[1];
-		ys[1]= (-b - w[0]*xs[1])/w[1];		
+		ys[0]= (+b - w[0]*xs[0])/w[1];
+		ys[1]= (+b - w[0]*xs[1])/w[1];		
 
 		context.lineWidth = 3;
 		context.beginPath();
+      	
       	// wx+b=0 line
       	context.moveTo(xs[0]*ss+width/2, ys[0]*ss+height/2);
       	context.lineTo(xs[1]*ss+width/2, ys[1]*ss+height/2);
@@ -147,10 +148,20 @@
 		context.strokeStyle = color;
 		context.stroke();
 
+
 		context.lineWidth = .3;
-		context.beginPath();
-      	
-      	
+		context.beginPath();      	
+      	// wx+b=0 line
+      	context.moveTo( width/2, height/2 );
+      	context.lineTo( w[0]*ss+width/2 , w[1]*ss+height/2  );
+
+      	context.closePath();		
+		context.strokeStyle = color;
+		context.stroke();
+
+
+		context.lineWidth = .3;
+		context.beginPath();     
       	
       	context.closePath();	
 		context.strokeStyle = color;
@@ -176,8 +187,19 @@
 	function train() {		
 		var s = new svm();		
 		s.train( dataset, labels );
-		var wb = s.compute_weights();
-		draw_svm( wb.w, wb.b, ss, "black");
+		var w = null;
+
+		/*
+		for ( i in s.log ) {
+			w = s.compute_weights( s.log[i].a );
+			draw_svm( w, s.log[i].b, ss, "black");	
+		}
+		*/
+
+		w = s.compute_weights( s.a );
+		draw_svm( w, s.b, ss, "black");	
+		console.log( {'w':w,'b':s.b});
+		//console.log( s.log );
 	}
 
 	</script>
